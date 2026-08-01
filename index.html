@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#050705">
+<title>শুনসুই কিয়োরাকু | Bug Bounty Hunter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+    --primary: #00ff88;
+    --secondary: #00c46a;
+    --bg: #050705;
+    --text: #e6fff2;
+    --muted: #8fa89b;
+    --border: rgba(0,255,140,0.14);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Hind Siliguri', sans-serif; overflow-x: hidden; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+.glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); border: 1px solid var(--border); }
+.btn-grad { background: linear-gradient(90deg, var(--primary), var(--secondary)); color: #03130a; transition: 0.3s; }
+.btn-grad:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,255,136,.4); }
+.grad-text { background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cursor-blink::after { content: '▌'; color: var(--primary); margin-left: 2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.sev-critical { color: #ff4d4d; border-color: rgba(255,77,77,.4); background: rgba(255,77,77,.08); }
+.sev-high { color: #ffb020; border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.08); }
+.sev-medium { color: var(--primary); border-color: var(--border); background: rgba(0,255,136,.08); }
+.sev-low { color: var(--muted); border-color: var(--border); background: rgba(143,168,155,.08); }
+
+/* Hidden Admin Panel */
+#adminPanel {
+    position: fixed; top: 0; right: -100%; width: 100%; max-width: 400px; height: 100vh;
+    background: #0a100c; border-left: 2px solid var(--primary); z-index: 9999; transition: right 0.3s;
+    overflow-y: auto; box-shadow: -10px 0 30px rgba(0,0,0,0.5); display: none; 
+}
+#adminPanel.active { right: 0; display: block; }
+.admin-section { padding: 15px; border-bottom: 1px solid var(--border); }
+.admin-input {
+    width: 100%; background: #050705; border: 1px solid #2a3a30; padding: 8px; margin-bottom: 10px;
+    border-radius: 5px; color: var(--primary); font-family: 'JetBrains Mono'; font-size: 14px;
+}
+.admin-label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; text-transform: uppercase; }
+.code-box {
+    width: 100%; height: 150px; background: #000; color: #0f0; border: 1px solid var(--primary);
+    padding: 10px; font-size: 10px; border-radius: 5px; margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-300">
+<div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+<a href="#home" class="flex items-center gap-2">
+<span class="w-10 h-10 rounded-xl btn-grad flex items-center justify-center font-mono font-bold text-sm">SK</span>
+<span class="font-mono font-semibold text-lg" id="navName">shunsui@bugbounty</span>
+</a>
+<div class="hidden md:flex gap-8 text-sm font-medium">
+<a href="#home" class="hover:text-[var(--primary)] transition">হোম</a>
+<a href="#about" class="hover:text-[var(--primary)] transition">সম্পর্কে</a>
+<a href="#writeups" class="hover:text-[var(--primary)] transition">রাইটআপ</a>
+<a href="#contact" class="hover:text-[var(--primary)] transition">যোগাযোগ</a>
+</div>
+<a href="#contact" class="hidden md:inline-flex btn-grad font-semibold px-5 py-2 rounded-full text-sm">হায়ার করুন</a>
+</div>
+</nav>
+
+<!-- Hero -->
+<section id="home" class="min-h-screen flex items-center pt-24 px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
+<div>
+<div class="inline-flex items-center gap-2 glass px-4 py-2 rounded-full mb-6 text-xs font-mono" style="color: var(--primary);">
+<span class="w-2 h-2 rounded-full animate-pulse" style="background: var(--primary);"></span>
+<span id="heroAvailability">নতুন এনগেজমেন্টের জন্য উন্মুক্ত</span>
+</div>
+<h1 class="text-4xl md:text-6xl font-bold leading-tight mb-5">
+আমি <span class="grad-text" id="heroName">শুনসুই কিয়োরাকু</span><br>
+একজন <span id="typedRole" class="font-mono cursor-blink" style="color: var(--primary);"></span>
+</h1>
+<p class="text-lg max-w-xl leading-relaxed mb-8" style="color: var(--muted);" id="heroDesc"></p>
+<div class="flex gap-4 mb-10">
+<a href="#writeups" class="btn-grad font-semibold px-7 py-3 rounded-full inline-flex items-center gap-2"><i class="fa-solid fa-bug"></i> রাইটআপ দেখুন</a>
+<a href="#contact" class="border font-semibold px-7 py-3 rounded-full inline-flex items-center gap-2 glass" style="border-color: var(--border);">কথা বলুন</a>
+</div>
+<div class="flex gap-4" id="socials"></div>
+</div>
+<div class="hidden lg:block relative">
+<div class="glass rounded-2xl p-6">
+<div class="flex gap-2 mb-4">
+<span class="w-3 h-3 rounded-full bg-red-500"></span>
+<span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+<span class="w-3 h-3 rounded-full bg-green-500"></span>
+</div>
+<pre class="font-mono text-sm" style="color: var(--muted);">
+<span style="color: var(--primary);">$</span> subfinder -d target.com | httpx | nuclei
+[INF] Found 12 subdomains
+[INF] Scanning...
+[critical] CVE-2023-XXXX detected
+[high] XSS vulnerability found
+<span style="color: var(--primary);">$</span> status: <span style="color: var(--primary);">hunting_active_</span>
+</pre>
+</div>
+</div>
+</section>
+
+<!-- About -->
+<section id="about" class="py-20 px-6 max-w-7xl mx-auto">
+<h2 class="text-3xl md:text-4xl font-bold mb-12 text-center">আমি কে এবং <span class="grad-text">কী করি</span></h2>
+<div class="grid md:grid-cols-2 gap-12 items-center">
+<div class="glass rounded-2xl p-8">
+<p class="leading-relaxed mb-4" style="color: var(--muted);" id="aboutText1"></p>
+<p class="leading-relaxed" style="color: var(--muted);" id="aboutText2"></p>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="glass rounded-2xl p-6 text-center">
+<h3 class="text-4xl font-bold font-mono mb-2" style="color: var(--primary);" id="stat1Num"></h3>
+<p style="color: var(--muted);" id="stat1Label"></p>
+</div>
+<div class="glass rounded-2xl p-6 text-center">
+<h3 class="text-4xl font-bold font-mono mb-2" style="color: var(--primary);" id="stat2Num"></h3>
+<p style="color: var(--muted);" id="stat2Label"></p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Writeups -->
+<section id="writeups" class="py-20 px-6 max-w-7xl mx-auto">
+<h2 class="text-3xl md:text-4xl font-bold mb-12 text-center">সাম্প্রতিক <span class="grad-text">রাইটআপ</span></h2>
+<div class="grid md:grid-cols-3 gap-8" id="writeupsGrid"></div>
+</section>
+
+<!-- Contact -->
+<section id="contact" class="py-20 px-6 max-w-4xl mx-auto text-center">
+<h2 class="text-3xl md:text-4xl font-bold mb-8">চলুন <span class="grad-text">কথা বলি</span></h2>
+<div class="glass rounded-2xl p-10">
+<p class="mb-6" style="color: var(--muted);" id="contactText"></p>
+<a href="mailto:" id="emailLink" class="font-mono text-xl hover:underline" style="color: var(--primary);"></a>
+</div>
+</section>
+
+<footer class="py-8 text-center border-t" style="border-color: var(--border); color: var(--muted);">
+<p>© <span id="year"></span> <span id="footerName"></span>. সর্বস্বত্ব সংরক্ষিত।</p>
+</footer>
+
+<!-- Hidden Admin Panel (Ctrl + Shift + A) -->
+<div id="adminPanel">
+<div class="p-4 bg-[var(--primary)] text-[var(--bg)] flex justify-between items-center sticky top-0 z-10">
+<h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-screwdriver-wrench"></i> Admin Panel</h2>
+<button onclick="toggleAdmin()" class="text-xl"><i class="fa-solid fa-xmark"></i></button>
+</div>
+<div class="p-4">
+<button onclick="generateCode()" class="w-full btn-grad font-bold py-2 rounded-lg mb-2">Get Code (সবার জন্য পাবলিশ করতে)</button>
+<button onclick="saveLocal()" class="w-full bg-blue-500/20 text-blue-400 border border-blue-500/40 font-bold py-2 rounded-lg">Save (শুধু আমার ব্রাউজারে দেখতে)</button>
+</div>
+
+<div class="admin-section">
+<h3 class="font-bold mb-3 text-[var(--primary)]">Content</h3>
+<label class="admin-label">Nav Name</label>
+<input type="text" id="adminNavName" class="admin-input">
+<label class="admin-label">Hero Name</label>
+<input type="text" id="adminHeroName" class="admin-input">
+<label class="admin-label">Availability Text</label>
+<input type="text" id="adminAvailability" class="admin-input">
+<label class="admin-label">Hero Description</label>
+<textarea id="adminHeroDesc" class="admin-input" rows="3"></textarea>
+<label class="admin-label">Typing Roles (কমা দিয়ে আলাদা করুন)</label>
+<input type="text" id="adminRoles" class="admin-input">
+</div>
+
+<div class="admin-section">
+<h3 class="font-bold mb-3 text-[var(--primary)]">About & Stats</h3>
+<label class="admin-label">About Text 1</label>
+<textarea id="adminAbout1" class="admin-input" rows="2"></textarea>
+<label class="admin-label">About Text 2</label>
+<textarea id="adminAbout2" class="admin-input" rows="2"></textarea>
+<div class="grid grid-cols-2 gap-2">
+<div><label class="admin-label">Stat 1 Num</label><input type="text" id="adminStat1Num" class="admin-input"></div>
+<div><label class="admin-label">Stat 1 Label</label><input type="text" id="adminStat1Label" class="admin-input"></div>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<div><label class="admin-label">Stat 2 Num</label><input type="text" id="adminStat2Num" class="admin-input"></div>
+<div><label class="admin-label">Stat 2 Label</label><input type="text" id="adminStat2Label" class="admin-input"></div>
+</div>
+</div>
+
+<div class="admin-section">
+<h3 class="font-bold mb-3 text-[var(--primary)]">Writeups</h3>
+<div id="writeupEditor"></div>
+<button onclick="addWriteup()" class="mt-2 w-full border border-dashed border-[var(--primary)] text-[var(--primary)] py-2 rounded-lg text-sm">+ Add Writeup</button>
+</div>
+
+<div class="admin-section">
+<h3 class="font-bold mb-3 text-[var(--primary)]">Contact & Socials</h3>
+<label class="admin-label">Contact Text</label>
+<textarea id="adminContactText" class="admin-input" rows="2"></textarea>
+<label class="admin-label">Email</label>
+<input type="text" id="adminEmail" class="admin-input">
+<div id="socialsEditor"></div>
+</div>
+</div>
+
+<script>
+// --- Default Data (এখানে আপনার মূল ডাটা থাকে) ---
+const DEFAULT_DATA = {
+    navName: "shunsui@bugbounty",
+    heroName: "শুনসুই কিয়োরাকু",
+    availability: "নতুন এনগেজমেন্টের জন্য উন্মুক্ত",
+    heroDesc: "ওয়েব অ্যাপ্লিকেশনে ভালনারেবিলিটি খুঁজে বের করা এবং রেসপন্সিবল ডিসক্লোজারের মাধ্যমে সংস্থাগুলোকে নিরাপদ রাখাই আমার কাজ।",
+    roles: ["Bug Bounty Hunter", "Security Researcher"],
+    aboutText1: "আমি একজন প্রফেশনাল বাগ বাউন্টি হান্টার ও সাইবার সিকিউরিটি রিসার্চার।",
+    aboutText2: "প্রতিটি ফাইন্ডিং রেসপন্সিবলি রিপোর্ট করি, প্রুফ-অফ-কনসেপ্ট ও রেমিডিয়েশন গাইডলাইন সহ।",
+    stat1: { num: "80+", label: "ভালনারেবিলিটি" },
+    stat2: { num: "25+", label: "প্রোগ্রাম" },
+    contactText: "প্রাইভেট বাগ বাউন্টি প্রোগ্রাম বা সিকিউরিটি কনসালটেশনের জন্য যোগাযোগ করুন।",
+    email: "hello@shunsui.dev",
+    socials: [
+        { icon: "fa-brands fa-twitter", url: "https://twitter.com" },
+        { icon: "fa-brands fa-github", url: "https://github.com" },
+        { icon: "fa-brands fa-linkedin-in", url: "https://linkedin.com" },
+        { icon: "fa-solid fa-bug", url: "https://hackerone.com" }
+    ],
+    writeups: [
+        { title: "IDOR Vulnerability in E-commerce", severity: "High", date: "2024-03-12", excerpt: "অর্ডার ID ম্যানিপুলেট করে অন্য ইউজারের তথ্য অ্যাক্সেস।", link: "#" },
+        { title: "Stored XSS in Comment Section", severity: "Medium", date: "2024-01-28", excerpt: "কমেন্ট ফিল্ডে স্যানিটাইজেশনের অভাবে স্টোরড XSS।", link: "#" }
+    ]
+};
+
+let data = loadData();
+
+function loadData() {
+    const stored = localStorage.getItem('portfolioData_v2');
+    if (stored) return JSON.parse(stored);
+    return JSON.parse(JSON.stringify(DEFAULT_DATA)); 
+}
+
+// --- Apply Data to Main UI ---
+function applyData() {
+    document.getElementById('navName').textContent = data.navName;
+    document.getElementById('heroName').textContent = data.heroName;
+    document.getElementById('heroAvailability').textContent = data.availability;
+    document.getElementById('heroDesc').textContent = data.heroDesc;
+    document.getElementById('aboutText1').textContent = data.aboutText1;
+    document.getElementById('aboutText2').textContent = data.aboutText2;
+    document.getElementById('stat1Num').textContent = data.stat1.num;
+    document.getElementById('stat1Label').textContent = data.stat1.label;
+    document.getElementById('stat2Num').textContent = data.stat2.num;
+    document.getElementById('stat2Label').textContent = data.stat2.label;
+    document.getElementById('contactText').textContent = data.contactText;
+    document.getElementById('emailLink').textContent = data.email;
+    document.getElementById('emailLink').href = `mailto:${data.email}`;
+    document.getElementById('year').textContent = new Date().getFullYear();
+    document.getElementById('footerName').textContent = data.heroName;
+
+    document.getElementById('socials').innerHTML = data.socials.map(s => `
+        <a href="${s.url}" target="_blank" class="w-12 h-12 glass rounded-full flex items-center justify-center hover:bg-[var(--primary)] hover:text-[var(--bg)] transition text-xl">
+            <i class="${s.icon}"></i>
+        </a>
+    `).join('');
+
+    const sevClass = (s) => {
+        const m = { "Critical": "sev-critical", "High": "sev-high", "Medium": "sev-medium", "Low": "sev-low" };
+        return m[s] || "sev-medium";
+    };
+    const grid = document.getElementById('writeupsGrid');
+    if (data.writeups && data.writeups.length > 0) {
+        grid.innerHTML = data.writeups.map(w => `
+            <div class="glass rounded-2xl overflow-hidden hover:scale-105 transition duration-300">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-xs font-mono border px-2 py-1 rounded-full ${sevClass(w.severity)}">${w.severity || 'Info'}</span>
+                        <span class="text-xs font-mono" style="color: var(--muted);">${w.date || ''}</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">${w.title}</h3>
+                    <p class="text-sm mb-4" style="color: var(--muted);">${w.excerpt || ''}</p>
+                    <a href="${w.link || '#'}" class="text-sm font-mono hover:underline" style="color: var(--primary);">বিস্তারিত পড়ুন <i class="fa-solid fa-arrow-right ml-1"></i></a>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        grid.innerHTML = `<p class="text-center col-span-3" style="color: var(--muted);">এখনো কোনো রাইটআপ যোগ করা হয়নি।</p>`;
+    }
+}
+
+// --- Hidden Admin Panel Logic ---
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        toggleAdmin();
+    }
+});
+
+function toggleAdmin() {
+    const panel = document.getElementById('adminPanel');
+    panel.classList.toggle('active');
+    if (panel.classList.contains('active')) {
+        populateAdmin();
+    }
+}
+
+function populateAdmin() {
+    document.getElementById('adminNavName').value = data.navName;
+    document.getElementById('adminHeroName').value = data.heroName;
+    document.getElementById('adminAvailability').value = data.availability;
+    document.getElementById('adminHeroDesc').value = data.heroDesc;
+    document.getElementById('adminRoles').value = data.roles.join(', ');
+    document.getElementById('adminAbout1').value = data.aboutText1;
+    document.getElementById('adminAbout2').value = data.aboutText2;
+    document.getElementById('adminStat1Num').value = data.stat1.num;
+    document.getElementById('adminStat1Label').value = data.stat1.label;
+    document.getElementById('adminStat2Num').value = data.stat2.num;
+    document.getElementById('adminStat2Label').value = data.stat2.label;
+    document.getElementById('adminContactText').value = data.contactText;
+    document.getElementById('adminEmail').value = data.email;
+
+    const we = document.getElementById('writeupEditor');
+    we.innerHTML = '';
+    data.writeups.forEach((w, i) => {
+        we.innerHTML += `
+            <div class="mb-3 p-2 border border-[var(--border)] rounded">
+                <input type="text" placeholder="Title" value="${w.title}" oninput="updateWriteup(${i}, 'title', this.value)" class="admin-input text-xs">
+                <select oninput="updateWriteup(${i}, 'severity', this.value)" class="admin-input text-xs">
+                    <option ${w.severity === 'Critical' ? 'selected' : ''}>Critical</option>
+                    <option ${w.severity === 'High' ? 'selected' : ''}>High</option>
+                    <option ${w.severity === 'Medium' ? 'selected' : ''}>Medium</option>
+                    <option ${w.severity === 'Low' ? 'selected' : ''}>Low</option>
+                </select>
+                <input type="text" placeholder="Date" value="${w.date}" oninput="updateWriteup(${i}, 'date', this.value)" class="admin-input text-xs">
+                <textarea placeholder="Excerpt" oninput="updateWriteup(${i}, 'excerpt', this.value)" class="admin-input text-xs" rows="2">${w.excerpt}</textarea>
+                <button onclick="deleteWriteup(${i})" class="text-red-400 text-xs">Delete</button>
+            </div>
+        `;
+    });
+
+    const se = document.getElementById('socialsEditor');
+    se.innerHTML = '<label class="admin-label mt-4">Social Links</label>';
+    data.socials.forEach((s, i) => {
+        se.innerHTML += `
+            <div class="flex gap-2 mb-2">
+                <input type="text" placeholder="Icon Class" value="${s.icon}" oninput="updateSocial(${i}, 'icon', this.value)" class="admin-input text-xs">
+                <input type="text" placeholder="URL" value="${s.url}" oninput="updateSocial(${i}, 'url', this.value)" class="admin-input text-xs">
+            </div>
+        `;
+    });
+}
+
+function updateWriteup(index, key, val) { data.writeups[index][key] = val; }
+function deleteWriteup(index) { data.writeups.splice(index, 1); populateAdmin(); }
+function addWriteup() { data.writeups.push({ title: "New Writeup", severity: "Medium", date: "2024-01-01", excerpt: "", link: "#" }); populateAdmin(); }
+function updateSocial(index, key, val) { data.socials[index][key] = val; }
+
+function syncDataFromAdmin() {
+    data.navName = document.getElementById('adminNavName').value;
+    data.heroName = document.getElementById('adminHeroName').value;
+    data.availability = document.getElementById('adminAvailability').value;
+    data.heroDesc = document.getElementById('adminHeroDesc').value;
+    data.roles = document.getElementById('adminRoles').value.split(',').map(r => r.trim()).filter(r => r);
+    data.aboutText1 = document.getElementById('adminAbout1').value;
+    data.aboutText2 = document.getElementById('adminAbout2').value;
+    data.stat1.num = document.getElementById('adminStat1Num').value;
+    data.stat1.label = document.getElementById('adminStat1Label').value;
+    data.stat2.num = document.getElementById('adminStat2Num').value;
+    data.stat2.label = document.getElementById('adminStat2Label').value;
+    data.contactText = document.getElementById('adminContactText').value;
+    data.email = document.getElementById('adminEmail').value;
+}
+
+// শুধু ব্রাউজারে সেভ করার জন্য
+function saveLocal() {
+    syncDataFromAdmin();
+    localStorage.setItem('portfolioData_v2', JSON.stringify(data));
+    applyData();
+    alert('সফলভাবে সেভ হয়েছে! (এটি শুধু আপনার ব্রাউজারে সেভ হবে)');
+}
+
+// সবার জন্য পার্মানেন্ট কোড জেনারেট করার জন্য
+function generateCode() {
+    syncDataFromAdmin();
+    applyData();
+    
+    const newDefaultData = `const DEFAULT_DATA = ${JSON.stringify(data, null, 2)};`;
+    alert('নিচের বক্সে আপনার নতুন কোড তৈরি হয়ে গেছে! এটি কপি করে আপনার GitHub এর index.html ফাইলে গিয়ে পুরোনো DEFAULT_DATA এর জায়গায় পেস্ট করে দিন।');
+    
+    const we = document.getElementById('writeupEditor');
+    we.innerHTML = `<p class="text-xs text-[var(--muted)] mb-2">এই কোডটি কপি করে GitHub এ পেস্ট করুন:</p>
+    <textarea class="code-box" onclick="this.select()">${newDefaultData}</textarea>`;
+}
+
+// Typing Effect
+let rIdx = 0, cIdx = 0, deleting = false;
+function typeLoop() {
+    const roles = data.roles;
+    if(roles.length === 0) return;
+    const word = roles[rIdx];
+    const typedEl = document.getElementById('typedRole');
+    if (!deleting) {
+        cIdx++; typedEl.textContent = word.slice(0, cIdx);
+        if (cIdx === word.length) { deleting = true; setTimeout(typeLoop, 1500); return; }
+    } else {
+        cIdx--; typedEl.textContent = word.slice(0, cIdx);
+        if (cIdx === 0) { deleting = false; rIdx = (rIdx + 1) % roles.length; }
+    }
+    setTimeout(typeLoop, deleting ? 45 : 90);
+}
+
+// Init
+applyData();
+typeLoop();
+</script>
+</body>
+</html>
